@@ -2,5 +2,7 @@
   "name": "CompHelper — Gestão de Catálogo e Orçamentos",
   "description": "Gestão de catálogo multi-fornecedor e criação rápida de orçamentos com cálculo automático em tempo real e exportação PDF.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

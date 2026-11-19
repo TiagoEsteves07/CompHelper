@@ -25,10 +25,12 @@ interface CatalogViewProps {
   items: CatalogItem[];
   loading: boolean;
   defaultMarginPercent: number;
+  initialSheet?: 'all' | CatalogSheet;
   onUpdateDefaultMargin: (margin: number) => Promise<void>;
   onCreateItem: (input: CatalogItemInput) => Promise<void>;
   onUpdateItem: (itemId: string, input: CatalogItemInput) => Promise<void>;
   onDeleteItem: (itemId: string) => Promise<void>;
+  onClearCatalog: () => Promise<void>;
   onImportItems: (
     items: CatalogItemInput[],
     mode: 'upsert' | 'add_only'
@@ -42,20 +44,24 @@ export function CatalogView({
   items,
   loading,
   defaultMarginPercent,
+  initialSheet = 'material',
   onUpdateDefaultMargin,
   onCreateItem,
   onUpdateItem,
   onDeleteItem,
+  onClearCatalog,
   onImportItems,
   onAddItemToQuote,
 }: CatalogViewProps) {
-  const [activeSheet, setActiveSheet] = useState<SheetFilter>('material');
+  const [activeSheet, setActiveSheet] = useState<SheetFilter>(initialSheet);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
   const [marginDraft, setMarginDraft] = useState<string>(String(defaultMarginPercent));
   const [savingMargin, setSavingMargin] = useState(false);
 
@@ -239,6 +245,46 @@ export function CatalogView({
             <Plus className="w-4 h-4" />
             Novo Artigo
           </button>
+
+          {items.length > 0 &&
+            (confirmClearAll ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs">
+                <span className="text-red-800 font-medium">Eliminar todos ({items.length})?</span>
+                <button
+                  type="button"
+                  disabled={clearingAll}
+                  onClick={async () => {
+                    setClearingAll(true);
+                    try {
+                      await onClearCatalog();
+                      setConfirmClearAll(false);
+                    } finally {
+                      setClearingAll(false);
+                    }
+                  }}
+                  className="px-2 py-1 font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded"
+                >
+                  {clearingAll ? 'A limpar...' : 'Confirmar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmClearAll(false)}
+                  className="px-1.5 py-1 text-slate-600 hover:text-slate-900"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmClearAll(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-700 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 rounded-lg transition-colors whitespace-nowrap"
+                title="Eliminar todos os artigos do catálogo"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpar catálogo
+              </button>
+            ))}
         </div>
       </div>
 
@@ -306,19 +352,33 @@ export function CatalogView({
         ) : filteredItems.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-sm font-medium text-slate-900">
-              Nenhum artigo encontrado nesta vista
+              {items.length === 0
+                ? 'O seu catálogo ainda está vazio'
+                : 'Nenhum artigo encontrado nesta vista'}
             </p>
-            <p className="text-xs text-slate-500 mt-1 mb-5">
-              Ajuste a pesquisa ou adicione manualmente um artigo à folha selecionada.
+            <p className="text-xs text-slate-500 mt-1 mb-5 max-w-md mx-auto">
+              {items.length === 0
+                ? 'Importe diretamente o seu ficheiro Excel (.xlsx / .csv) ou comece a adicionar os seus produtos e serviços manualmente.'
+                : 'Ajuste os filtros de pesquisa ou adicione um novo artigo à folha selecionada.'}
             </p>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar primeiro artigo
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Importar Excel / CSV
+              </button>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar manualmente
+              </button>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">

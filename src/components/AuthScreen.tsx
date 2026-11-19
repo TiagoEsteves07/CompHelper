@@ -12,11 +12,31 @@ export function AuthScreen() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro ao iniciar sessão.';
-      if (msg.includes('popup-closed-by-user')) {
+      const code =
+        typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: string }).code || '')
+          : '';
+      const msg = err instanceof Error ? err.message : '';
+      const host = typeof window !== 'undefined' ? window.location.hostname : '';
+
+      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
+        setError(
+          `Domínio não autorizado no Firebase (${host}). Adicione "${host}" em Firebase Console → Authentication → Settings → Authorized domains.`
+        );
+      } else if (code === 'auth/popup-closed-by-user' || msg.includes('popup-closed-by-user')) {
         setError('A janela de autenticação foi fechada antes de concluir o início de sessão.');
+      } else if (code === 'auth/popup-blocked' || msg.includes('popup-blocked')) {
+        setError(
+          'O navegador bloqueou a janela de início de sessão Google. Permita pop-ups para este site e tente novamente.'
+        );
+      } else if (code === 'auth/operation-not-allowed') {
+        setError(
+          'O início de sessão com Google não está ativo no projeto Firebase (Authentication → Sign-in method).'
+        );
       } else {
-        setError('Não foi possível iniciar sessão com o Google. Tente novamente.');
+        setError(
+          `Não foi possível iniciar sessão com o Google${code ? ` (${code})` : ''}. Verifique os domínios autorizados no Firebase.`
+        );
       }
       setLoading(false);
     }
@@ -117,8 +137,8 @@ export function AuthScreen() {
               </button>
 
               <p className="mt-5 text-xs text-slate-500 leading-relaxed">
-                No primeiro acesso, o catálogo inicial das 4 folhas do preçário é carregado
-                automaticamente para a sua conta.
+                A sua conta inicia totalmente limpa: introduza os seus artigos manualmente ou
+                importe diretamente o seu ficheiro Excel (.xlsx / .csv).
               </p>
             </div>
           </div>

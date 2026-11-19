@@ -6,6 +6,7 @@ import { QUOTE_STATUS_META, type Quote, type QuoteStatus } from '../types';
 interface QuoteHistoryViewProps {
   quotes: Quote[];
   loading: boolean;
+  initialStatus?: 'all' | QuoteStatus;
   onNewQuote: () => void;
   onOpenQuote: (quote: Quote) => Promise<void>;
   onPreviewQuote: (quote: Quote) => Promise<void>;
@@ -19,6 +20,7 @@ type StatusFilter = 'all' | QuoteStatus;
 export function QuoteHistoryView({
   quotes,
   loading,
+  initialStatus = 'all',
   onNewQuote,
   onOpenQuote,
   onPreviewQuote,
@@ -27,7 +29,7 @@ export function QuoteHistoryView({
   onDeleteQuote,
 }: QuoteHistoryViewProps) {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 

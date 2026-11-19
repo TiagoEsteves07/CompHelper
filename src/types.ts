@@ -192,4 +192,4 @@ export const QUOTE_STATUS_META: Record<
   },
 };
 
-export type AppView = 'builder' | 'catalog' | 'history' | 'settings';
+export type AppView = 'dashboard' | 'builder' | 'catalog' | 'history' | 'settings';

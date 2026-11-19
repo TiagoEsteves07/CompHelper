@@ -5,6 +5,7 @@ import {
   Calculator,
   Clock,
   Layers,
+  LayoutDashboard,
   LogOut,
   Menu,
   Plus,
@@ -13,12 +14,14 @@ import {
 import { AuthScreen } from './components/AuthScreen';
 import { CatalogView } from './components/CatalogView';
 import { CompanySettingsView } from './components/CompanySettingsView';
+import { DashboardView } from './components/DashboardView';
 import { QuoteBuilderView, type ActiveQuoteDraft } from './components/QuoteBuilderView';
 import { QuoteHistoryView } from './components/QuoteHistoryView';
 import { QuotePreviewModal } from './components/QuotePreviewModal';
 import { auth, signOutUser } from './lib/firebase';
 import {
   batchImportCatalogItems,
+  clearAllCatalogItems,
   createCatalogItem,
   deleteCatalogItem,
   deleteQuoteWithLines,
@@ -40,6 +43,7 @@ import type {
   AppView,
   CatalogItem,
   CatalogItemInput,
+  CatalogSheet,
   CompanyProfile,
   Quote,
   QuoteStatus,
@@ -88,7 +92,9 @@ export default function App() {
   const [dataLoading, setDataLoading] = useState(true);
   const [fatalError, setFatalError] = useState<Error | null>(null);
 
-  const [activeView, setActiveView] = useState<AppView>('builder');
+  const [activeView, setActiveView] = useState<AppView>('dashboard');
+  const [catalogInitialSheet, setCatalogInitialSheet] = useState<'all' | CatalogSheet>('material');
+  const [historyInitialStatus, setHistoryInitialStatus] = useState<'all' | QuoteStatus>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [draft, setDraft] = useState<ActiveQuoteDraft>(() => createEmptyDraft(null));
@@ -494,6 +500,11 @@ export default function App() {
     [showToast]
   );
 
+  const handleClearCatalog = useCallback(async () => {
+    await clearAllCatalogItems(catalogItems);
+    showToast('Catálogo limpo com sucesso.');
+  }, [catalogItems, showToast]);
+
   const handleImportCatalogItems = useCallback(
     async (incoming: CatalogItemInput[], mode: 'upsert' | 'add_only') => {
       if (!user) return { created: 0, updated: 0, skipped: 0 };
@@ -547,6 +558,7 @@ export default function App() {
   }
 
   const navItems: { id: AppView; label: string; icon: typeof Calculator; count?: number }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'builder', label: 'Criador de Orçamentos', icon: Calculator },
     { id: 'catalog', label: 'Catálogo', icon: Layers, count: catalogItems.length },
     { id: 'history', label: 'Histórico', icon: Clock, count: quotes.length },
@@ -678,6 +690,27 @@ export default function App() {
 
         {/* Viewport Principal */}
         <main className="no-print flex-1 p-4 sm:p-8 max-w-[1440px] w-full mx-auto">
+          {activeView === 'dashboard' && (
+            <DashboardView
+              quotes={quotes}
+              catalogItems={catalogItems}
+              profile={profile}
+              loading={dataLoading}
+              onNewQuote={handleStartNewQuote}
+              onOpenQuote={handleOpenQuote}
+              onPreviewQuote={handlePreviewQuoteFromHistory}
+              onNavigateCatalog={(sheet) => {
+                setCatalogInitialSheet(sheet ?? 'material');
+                setActiveView('catalog');
+              }}
+              onNavigateHistory={(status) => {
+                setHistoryInitialStatus(status ?? 'all');
+                setActiveView('history');
+              }}
+              onNavigateSettings={() => setActiveView('settings')}
+            />
+          )}
+
           {activeView === 'builder' && (
             <QuoteBuilderView
               draft={draft}
@@ -698,13 +731,16 @@ export default function App() {
 
           {activeView === 'catalog' && (
             <CatalogView
+              key={catalogInitialSheet}
               items={catalogItems}
               loading={dataLoading}
               defaultMarginPercent={profile?.defaultMarginPercent ?? 30}
+              initialSheet={catalogInitialSheet}
               onUpdateDefaultMargin={handleUpdateDefaultMargin}
               onCreateItem={handleCreateCatalogItem}
               onUpdateItem={handleUpdateCatalogItem}
               onDeleteItem={handleDeleteCatalogItem}
+              onClearCatalog={handleClearCatalog}
               onImportItems={handleImportCatalogItems}
               onAddItemToQuote={(item) => handleAddCatalogItemToQuote(item, false)}
             />
@@ -712,8 +748,10 @@ export default function App() {
 
           {activeView === 'history' && (
             <QuoteHistoryView
+              key={historyInitialStatus}
               quotes={quotes}
               loading={dataLoading}
+              initialStatus={historyInitialStatus}
               onNewQuote={handleStartNewQuote}
               onOpenQuote={handleOpenQuote}
               onPreviewQuote={handlePreviewQuoteFromHistory}

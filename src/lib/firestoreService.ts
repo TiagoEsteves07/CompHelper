@@ -13,7 +13,6 @@ import {
   writeBatch,
   type Unsubscribe,
 } from 'firebase/firestore';
-import { INITIAL_CATALOG_ITEMS } from '../data/initialCatalog';
 import type {
   CatalogItem,
   CatalogItemInput,
@@ -67,21 +66,21 @@ export function generateSafeId(prefix: string): string {
   return `${prefix}_${rand}`.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
 }
 
-export function defaultCompanyProfile(ownerId: string, email: string, displayName: string): CompanyProfile {
+export function defaultCompanyProfile(ownerId: string, email: string, _displayName: string): CompanyProfile {
   return {
     ownerId,
-    companyName: displayName ? `${displayName} — Serralharia` : 'A Minha Serralharia, Lda.',
+    companyName: '',
     nif: '',
     address: '',
     phone: '',
     email: clampStr(email, 160),
     logoDataUrl: '',
-    defaultMarginPercent: 30,
+    defaultMarginPercent: 0,
     defaultVatRate: 23,
     defaultValidityDays: 30,
-    defaultPaymentTerms: '50% na adjudicação e 50% na entrega/conclusão da obra.',
-    defaultNotes: 'Valores sujeitos a confirmação em obra. Prazo de execução a combinar após adjudicação.',
-    catalogSeeded: false,
+    defaultPaymentTerms: '',
+    defaultNotes: '',
+    catalogSeeded: true,
     nextQuoteSeq: 1,
   };
 }
@@ -94,7 +93,6 @@ export async function ensureCompanyProfileAndSeed(
   const profilePath = `companyProfiles/${ownerId}`;
   const profileRef = doc(db, 'companyProfiles', ownerId);
 
-  let profile: CompanyProfile;
   try {
     const snap = await getDoc(profileRef);
     if (!snap.exists()) {
@@ -104,54 +102,12 @@ export async function ensureCompanyProfileAndSeed(
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      profile = initial;
-    } else {
-      profile = snap.data() as CompanyProfile;
+      return initial;
     }
+    return snap.data() as CompanyProfile;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, profilePath);
   }
-
-  if (!profile.catalogSeeded) {
-    try {
-      const existingSnap = await getDocs(
-        query(collection(db, 'catalogItems'), where('ownerId', '==', ownerId))
-      );
-
-      if (existingSnap.empty) {
-        const batch = writeBatch(db);
-        for (const item of INITIAL_CATALOG_ITEMS) {
-          const itemId = generateSafeId('cat');
-          const ref = doc(db, 'catalogItems', itemId);
-          batch.set(ref, {
-            ownerId,
-            sheet: item.sheet,
-            category: clampStr(item.category, 140) || 'Geral',
-            description: clampStr(item.description, 240),
-            unit: clampStr(item.unit, 24),
-            suppliers: sanitizeSuppliers(item.suppliers),
-            referencePriceMin: clampNullableNum(item.referencePriceMin, 0, 100000000),
-            referencePriceMax: clampNullableNum(item.referencePriceMax, 0, 100000000),
-            manualSalePrice: clampNullableNum(item.manualSalePrice, 0, 100000000),
-            customMarginPercent: clampNullableNum(item.customMarginPercent, 0, 500),
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
-        await batch.commit();
-      }
-
-      await updateDoc(profileRef, {
-        catalogSeeded: true,
-        updatedAt: serverTimestamp(),
-      });
-      profile = { ...profile, catalogSeeded: true };
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'catalogItems');
-    }
-  }
-
-  return profile;
 }
 
 export function subscribeCompanyProfile(
@@ -294,6 +250,22 @@ export async function deleteCatalogItem(itemId: string): Promise<void> {
     await deleteDoc(doc(db, 'catalogItems', itemId));
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export async function clearAllCatalogItems(items: CatalogItem[]): Promise<void> {
+  const chunkSize = 400;
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const item of chunk) {
+      batch.delete(doc(db, 'catalogItems', item.id));
+    }
+    try {
+      await batch.commit();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'catalogItems');
+    }
   }
 }
 
