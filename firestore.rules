@@ -1,0 +1,355 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Global Hardened Primitives
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isNullableNumber(val) {
+      return val == null || (val is number && val >= 0 && val <= 100000000);
+    }
+
+    function isValidDiscountType(val) {
+      return val is string && val.size() <= 16 && val in ['percent', 'fixed'];
+    }
+
+    function isValidSheet(val) {
+      return val is string && val.size() <= 24 && val in ['material', 'material_cons', 'servicos', 'outros'];
+    }
+
+    function isValidQuoteStatus(val) {
+      return val is string && val.size() <= 24 && val in ['rascunho', 'enviado', 'aprovado', 'recusado'];
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Blueprints
+    // -------------------------------------------------------------------------
+    function isValidCompanyProfile(data) {
+      return data.keys().hasAll([
+          'ownerId', 'companyName', 'nif', 'address', 'phone', 'email',
+          'logoDataUrl', 'defaultMarginPercent', 'defaultVatRate',
+          'defaultValidityDays', 'defaultPaymentTerms', 'defaultNotes',
+          'catalogSeeded', 'nextQuoteSeq', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'companyName', 'nif', 'address', 'phone', 'email',
+          'logoDataUrl', 'defaultMarginPercent', 'defaultVatRate',
+          'defaultValidityDays', 'defaultPaymentTerms', 'defaultNotes',
+          'catalogSeeded', 'nextQuoteSeq', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.companyName is string && data.companyName.size() <= 160
+        && data.nif is string && data.nif.size() <= 32
+        && data.address is string && data.address.size() <= 300
+        && data.phone is string && data.phone.size() <= 40
+        && data.email is string && data.email.size() <= 160
+        && data.logoDataUrl is string && data.logoDataUrl.size() <= 350000
+        && data.defaultMarginPercent is number && data.defaultMarginPercent >= 0 && data.defaultMarginPercent <= 500
+        && data.defaultVatRate is number && data.defaultVatRate >= 0 && data.defaultVatRate <= 100
+        && data.defaultValidityDays is number && data.defaultValidityDays >= 1 && data.defaultValidityDays <= 365
+        && data.defaultPaymentTerms is string && data.defaultPaymentTerms.size() <= 600
+        && data.defaultNotes is string && data.defaultNotes.size() <= 1000
+        && data.catalogSeeded is bool
+        && data.nextQuoteSeq is number && data.nextQuoteSeq >= 1 && data.nextQuoteSeq <= 1000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCatalogItem(data) {
+      return data.keys().hasAll([
+          'ownerId', 'sheet', 'category', 'description', 'unit', 'suppliers',
+          'referencePriceMin', 'referencePriceMax', 'manualSalePrice',
+          'customMarginPercent', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'sheet', 'category', 'description', 'unit', 'suppliers',
+          'referencePriceMin', 'referencePriceMax', 'manualSalePrice',
+          'customMarginPercent', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && isValidSheet(data.sheet)
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 140
+        && data.description is string && data.description.size() <= 240
+        && data.unit is string && data.unit.size() <= 24
+        && data.suppliers is map && data.suppliers.size() <= 12
+        && isNullableNumber(data.referencePriceMin)
+        && isNullableNumber(data.referencePriceMax)
+        && isNullableNumber(data.manualSalePrice)
+        && (data.customMarginPercent == null || (data.customMarginPercent is number && data.customMarginPercent >= 0 && data.customMarginPercent <= 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuote(data) {
+      return data.keys().hasAll([
+          'ownerId', 'quoteNumber', 'title', 'clientName', 'clientNif',
+          'clientContact', 'issueDate', 'validUntil', 'status', 'notes',
+          'globalDiscountType', 'globalDiscountValue', 'applyVat', 'vatRate',
+          'subtotal', 'discountTotal', 'vatTotal', 'grandTotal', 'lineCount',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'quoteNumber', 'title', 'clientName', 'clientNif',
+          'clientContact', 'issueDate', 'validUntil', 'status', 'notes',
+          'globalDiscountType', 'globalDiscountValue', 'applyVat', 'vatRate',
+          'subtotal', 'discountTotal', 'vatTotal', 'grandTotal', 'lineCount',
+          'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.quoteNumber is string && data.quoteNumber.size() >= 1 && data.quoteNumber.size() <= 40
+        && data.title is string && data.title.size() <= 200
+        && data.clientName is string && data.clientName.size() <= 160
+        && data.clientNif is string && data.clientNif.size() <= 32
+        && data.clientContact is string && data.clientContact.size() <= 160
+        && data.issueDate is string && data.issueDate.size() <= 20
+        && data.validUntil is string && data.validUntil.size() <= 20
+        && isValidQuoteStatus(data.status)
+        && data.notes is string && data.notes.size() <= 2000
+        && isValidDiscountType(data.globalDiscountType)
+        && data.globalDiscountValue is number && data.globalDiscountValue >= 0 && data.globalDiscountValue <= 100000000
+        && data.applyVat is bool
+        && data.vatRate is number && data.vatRate >= 0 && data.vatRate <= 100
+        && data.subtotal is number && data.subtotal >= 0 && data.subtotal <= 1000000000
+        && data.discountTotal is number && data.discountTotal >= 0 && data.discountTotal <= 1000000000
+        && data.vatTotal is number && data.vatTotal >= 0 && data.vatTotal <= 1000000000
+        && data.grandTotal is number && data.grandTotal >= 0 && data.grandTotal <= 1000000000
+        && data.lineCount is number && data.lineCount >= 0 && data.lineCount <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuoteLine(data, quoteId) {
+      return data.keys().hasAll([
+          'ownerId', 'quoteId', 'order', 'catalogItemId', 'isCustom', 'sheet',
+          'category', 'description', 'unit', 'quantity', 'unitPrice',
+          'catalogUnitPrice', 'priceRangeHint', 'sourceSupplier',
+          'discountType', 'discountValue', 'lineSubtotal', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'quoteId', 'order', 'catalogItemId', 'isCustom', 'sheet',
+          'category', 'description', 'unit', 'quantity', 'unitPrice',
+          'catalogUnitPrice', 'priceRangeHint', 'sourceSupplier',
+          'discountType', 'discountValue', 'lineSubtotal', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.quoteId is string && isValidId(data.quoteId) && data.quoteId == quoteId
+        && data.order is number && data.order >= 0 && data.order <= 1000
+        && data.catalogItemId is string && data.catalogItemId.size() <= 128
+        && data.isCustom is bool
+        && data.sheet is string && data.sheet.size() <= 32
+        && data.category is string && data.category.size() <= 140
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 260
+        && data.unit is string && data.unit.size() <= 24
+        && data.quantity is number && data.quantity >= 0 && data.quantity <= 1000000
+        && data.unitPrice is number && data.unitPrice >= 0 && data.unitPrice <= 100000000
+        && isNullableNumber(data.catalogUnitPrice)
+        && data.priceRangeHint is string && data.priceRangeHint.size() <= 60
+        && data.sourceSupplier is string && data.sourceSupplier.size() <= 80
+        && isValidDiscountType(data.discountType)
+        && data.discountValue is number && data.discountValue >= 0 && data.discountValue <= 100000000
+        && data.lineSubtotal is number && data.lineSubtotal >= 0 && data.lineSubtotal <= 1000000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /companyProfiles/{userId}
+    // -------------------------------------------------------------------------
+    match /companyProfiles/{userId} {
+      allow get: if isVerified() && isValidId(userId) && userId == request.auth.uid;
+      allow list: if false;
+
+      allow create: if isVerified()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidCompanyProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidCompanyProfile(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Update company identity, logo, and default financial settings
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'companyName', 'nif', 'address', 'phone', 'email', 'logoDataUrl',
+            'defaultMarginPercent', 'defaultVatRate', 'defaultValidityDays',
+            'defaultPaymentTerms', 'defaultNotes', 'updatedAt'
+          ]) ||
+          // Action 2: Mark initial catalog seeded
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'catalogSeeded', 'updatedAt'
+          ]) ||
+          // Action 3: Increment quote sequence number
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'nextQuoteSeq', 'updatedAt'
+          ])
+        );
+
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /catalogItems/{itemId}
+    // -------------------------------------------------------------------------
+    match /catalogItems/{itemId} {
+      allow get: if isVerified()
+        && isValidId(itemId)
+        && existing().ownerId == request.auth.uid;
+
+      allow list: if isVerified()
+        && existing().ownerId == request.auth.uid;
+
+      allow create: if isVerified()
+        && isValidId(itemId)
+        && isValidCatalogItem(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(itemId)
+        && isValidCatalogItem(incoming())
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Full item edit or import update
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'sheet', 'category', 'description', 'unit', 'suppliers',
+            'referencePriceMin', 'referencePriceMax', 'manualSalePrice',
+            'customMarginPercent', 'updatedAt'
+          ])
+        );
+
+      allow delete: if isVerified()
+        && isValidId(itemId)
+        && existing().ownerId == request.auth.uid;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /quotes/{quoteId}
+    // -------------------------------------------------------------------------
+    match /quotes/{quoteId} {
+      allow get: if isVerified()
+        && isValidId(quoteId)
+        && existing().ownerId == request.auth.uid;
+
+      allow list: if isVerified()
+        && existing().ownerId == request.auth.uid;
+
+      allow create: if isVerified()
+        && isValidId(quoteId)
+        && isValidQuote(incoming())
+        && incoming().status == 'rascunho'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(quoteId)
+        && isValidQuote(incoming())
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        // Terminal State Locking: approved or rejected quotes cannot be mutated directly
+        && existing().status in ['rascunho', 'enviado']
+        && (
+          // Action 1: Update quote details, pricing, and totals
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'quoteNumber', 'title', 'clientName', 'clientNif', 'clientContact',
+            'issueDate', 'validUntil', 'status', 'notes', 'globalDiscountType',
+            'globalDiscountValue', 'applyVat', 'vatRate', 'subtotal',
+            'discountTotal', 'vatTotal', 'grandTotal', 'lineCount', 'updatedAt'
+          ]) ||
+          // Action 2: Status transition only
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'updatedAt'
+          ])
+        );
+
+      allow delete: if isVerified()
+        && isValidId(quoteId)
+        && existing().ownerId == request.auth.uid;
+
+      // -----------------------------------------------------------------------
+      // Subcollection: /quotes/{quoteId}/lines/{lineId}
+      // -----------------------------------------------------------------------
+      match /lines/{lineId} {
+        allow get: if isVerified()
+          && isValidId(quoteId)
+          && isValidId(lineId)
+          && existing().ownerId == request.auth.uid
+          && get(/databases/$(database)/documents/quotes/$(quoteId)).data.ownerId == request.auth.uid;
+
+        allow list: if isVerified()
+          && isValidId(quoteId)
+          && existing().ownerId == request.auth.uid
+          && existing().quoteId == quoteId;
+
+        allow create: if isVerified()
+          && isValidId(quoteId)
+          && isValidId(lineId)
+          && isValidQuoteLine(incoming(), quoteId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/quotes/$(quoteId))
+          && getAfter(/databases/$(database)/documents/quotes/$(quoteId)).data.ownerId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/quotes/$(quoteId)).data.status in ['rascunho', 'enviado'];
+
+        allow update: if isVerified()
+          && isValidId(quoteId)
+          && isValidId(lineId)
+          && isValidQuoteLine(incoming(), quoteId)
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().quoteId == existing().quoteId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && get(/databases/$(database)/documents/quotes/$(quoteId)).data.ownerId == request.auth.uid
+          && get(/databases/$(database)/documents/quotes/$(quoteId)).data.status in ['rascunho', 'enviado']
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'order', 'catalogItemId', 'isCustom', 'sheet', 'category',
+            'description', 'unit', 'quantity', 'unitPrice', 'catalogUnitPrice',
+            'priceRangeHint', 'sourceSupplier', 'discountType', 'discountValue',
+            'lineSubtotal', 'updatedAt'
+          ]);
+
+        allow delete: if isVerified()
+          && isValidId(quoteId)
+          && isValidId(lineId)
+          && existing().ownerId == request.auth.uid
+          && get(/databases/$(database)/documents/quotes/$(quoteId)).data.ownerId == request.auth.uid;
+      }
+    }
+  }
+}

@@ -1,0 +1,379 @@
+{
+  "entities": {
+    "CompanyProfile": {
+      "title": "CompanyProfile",
+      "description": "Configuração da empresa, logótipo e parâmetros fiscais/margem por utilizador.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "companyName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "nif": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "logoDataUrl": {
+          "type": "string",
+          "maxLength": 350000
+        },
+        "defaultMarginPercent": {
+          "type": "number"
+        },
+        "defaultVatRate": {
+          "type": "number"
+        },
+        "defaultValidityDays": {
+          "type": "number"
+        },
+        "defaultPaymentTerms": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "defaultNotes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "catalogSeeded": {
+          "type": "boolean"
+        },
+        "nextQuoteSeq": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "companyName",
+        "nif",
+        "address",
+        "phone",
+        "email",
+        "logoDataUrl",
+        "defaultMarginPercent",
+        "defaultVatRate",
+        "defaultValidityDays",
+        "defaultPaymentTerms",
+        "defaultNotes",
+        "catalogSeeded",
+        "nextQuoteSeq",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CatalogItem": {
+      "title": "CatalogItem",
+      "description": "Artigo de catálogo (Material, Consumível, Serviço ou Outro) com preços de fornecedores e PVP.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sheet": {
+          "type": "string",
+          "enum": ["material", "material_cons", "servicos", "outros"]
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "suppliers": {
+          "type": "object",
+          "description": "Mapa de fornecedores para { price: number | null, updatedAt: string }"
+        },
+        "referencePriceMin": {
+          "type": "number"
+        },
+        "referencePriceMax": {
+          "type": "number"
+        },
+        "manualSalePrice": {
+          "type": "number"
+        },
+        "customMarginPercent": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "sheet",
+        "category",
+        "description",
+        "unit",
+        "suppliers",
+        "referencePriceMin",
+        "referencePriceMax",
+        "manualSalePrice",
+        "customMarginPercent",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Quote": {
+      "title": "Quote",
+      "description": "Documento principal de orçamento com metadados do cliente, estado e totais calculados.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "quoteNumber": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "clientName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "clientNif": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "clientContact": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "issueDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "validUntil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "enum": ["rascunho", "enviado", "aprovado", "recusado"]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "globalDiscountType": {
+          "type": "string",
+          "enum": ["percent", "fixed"]
+        },
+        "globalDiscountValue": {
+          "type": "number"
+        },
+        "applyVat": {
+          "type": "boolean"
+        },
+        "vatRate": {
+          "type": "number"
+        },
+        "subtotal": {
+          "type": "number"
+        },
+        "discountTotal": {
+          "type": "number"
+        },
+        "vatTotal": {
+          "type": "number"
+        },
+        "grandTotal": {
+          "type": "number"
+        },
+        "lineCount": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "quoteNumber",
+        "title",
+        "clientName",
+        "clientNif",
+        "clientContact",
+        "issueDate",
+        "validUntil",
+        "status",
+        "notes",
+        "globalDiscountType",
+        "globalDiscountValue",
+        "applyVat",
+        "vatRate",
+        "subtotal",
+        "discountTotal",
+        "vatTotal",
+        "grandTotal",
+        "lineCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "QuoteLine": {
+      "title": "QuoteLine",
+      "description": "Linha individual de produto/serviço ou item avulso pertencente a um orçamento.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "quoteId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "order": {
+          "type": "number"
+        },
+        "catalogItemId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isCustom": {
+          "type": "boolean"
+        },
+        "sheet": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 260
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "unitPrice": {
+          "type": "number"
+        },
+        "catalogUnitPrice": {
+          "type": "number"
+        },
+        "priceRangeHint": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "sourceSupplier": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "discountType": {
+          "type": "string",
+          "enum": ["percent", "fixed"]
+        },
+        "discountValue": {
+          "type": "number"
+        },
+        "lineSubtotal": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "quoteId",
+        "order",
+        "catalogItemId",
+        "isCustom",
+        "sheet",
+        "category",
+        "description",
+        "unit",
+        "quantity",
+        "unitPrice",
+        "catalogUnitPrice",
+        "priceRangeHint",
+        "sourceSupplier",
+        "discountType",
+        "discountValue",
+        "lineSubtotal",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/companyProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/CompanyProfile" },
+      "description": "Perfil privado da empresa, logótipo e definições financeiras de cada utilizador."
+    },
+    "/catalogItems/{itemId}": {
+      "schema": { "$ref": "#/entities/CatalogItem" },
+      "description": "Catálogo de materiais, consumíveis, serviços e outros isolado por ownerId."
+    },
+    "/quotes/{quoteId}": {
+      "schema": { "$ref": "#/entities/Quote" },
+      "description": "Cabeçalhos e totais de orçamentos isolados por ownerId."
+    },
+    "/quotes/{quoteId}/lines/{lineId}": {
+      "schema": { "$ref": "#/entities/QuoteLine" },
+      "description": "Subcoleção de linhas pertencentes a cada orçamento."
+    }
+  }
+}
